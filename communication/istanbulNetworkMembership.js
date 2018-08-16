@@ -21,7 +21,7 @@ function requestExistingIstanbulNetworkMembership(result, cb) {
   function onData(msg) {
     let message = null
     if (msg && msg.payload) {
-      message = utils.Hex2a(msg.payload)
+      message = utils.hex2a(msg.payload)
     }
     if (message && message.indexOf('response|existingIstanbulNetworkMembership') >= 0) {
       receivedNetworkMembership = true
