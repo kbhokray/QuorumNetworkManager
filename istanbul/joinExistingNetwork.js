@@ -4,7 +4,7 @@ let prompt = require('prompt')
 let fs = require('fs')
 
 let whisper = require('../communication/whisperNetwork')
-let util = require('../utils')
+let utils = require('../utils')
 let constellation = require('../constellation')
 let peerHandler = require('../peerHandler')
 let fundingHandler = require('../fundingHandler')
@@ -43,13 +43,13 @@ function startIstanbulNode(result, cb) {
 function handleExistingFiles(result, cb) {
   if (result.keepExistingFiles === false) {
     let seqFunction = async.seq(
-      util.ClearDirectories,
-      util.CreateDirectories,
-      util.GetNewGethAccount,
-      util.GenerateEnode,
-      util.DisplayEnode,
-      constellation.CreateNewKeys,
-      constellation.CreateConfig
+      utils.clearDirectories,
+      utils.createDirectories,
+      utils.getNewGethAccount,
+      utils.generateEnode,
+      utils.displayEnode,
+      constellation.createNewKeys,
+      constellation.createConfig
     )
     seqFunction(result, function (err, res) {
       if (err) { return console.log('ERROR', err) }
@@ -64,8 +64,8 @@ function handleNetworkConfiguration(result, cb) {
   if (result.keepExistingFiles === false) {
     let seqFunction = async.seq(
       whisper.requestExistingIstanbulNetworkMembership,
-      whisper.GetGenesisBlockConfig,
-      whisper.GetStaticNodesFile
+      whisper.getGenesisBlockConfig,
+      whisper.getStaticNodesFile
     )
     seqFunction(result, function (err, res) {
       if (err) { return console.log('ERROR', err) }
@@ -111,7 +111,7 @@ function joinIstanbulNetwork(config, cb) {
     whisper.joinCommunicationNetwork,
     handleNetworkConfiguration,
     startIstanbulNode,
-    util.createWeb3Connection,
+    utils.createWeb3Connection,
     whisper.addEnodeResponseHandler,
     peerHandler.listenForNewEnodes,
     whisper.addEnodeRequestHandler,
