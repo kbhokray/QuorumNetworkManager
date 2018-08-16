@@ -17,4 +17,4 @@ function whatIsMyIp(cb){
   })
 }
 
-exports.WhatIsMyIp = whatIsMyIp
+exports.whatIsMyIp = whatIsMyIp

@@ -46,14 +46,14 @@ jspm_packages
 
 # Blockchain data files
 WhisperKeys/*
-Blockchain/raft-snap*
-Blockchain/static-nodes.json
-Blockchain/quorum-raft-state*
-Blockchain/raft-wal*
-Blockchain/geth*
-Blockchain/keystore*
-Blockchain/raftID
-Blockchain
+blockchain/raft-snap*
+blockchain/static-nodes.json
+blockchain/quorum-raft-state*
+blockchain/raft-wal*
+blockchain/geth*
+blockchain/keystore*
+blockchain/raftID
+blockchain
 quorum-config.json
 quorum-genesis.json
 

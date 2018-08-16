@@ -1,12 +1,13 @@
 var fs = require('fs');
-let config = require('./config.js')
+let config = require('./config')
 let setup = config.setup
-let newRaftNetwork = require('./newRaftNetwork.js')
-let joinExistingRaft = require('./joinExistingRaftNetwork.js')
-let newIstanbulNetwork = require('./newIstanbulNetwork.js')
-let joinExistingIstanbul = require('./joinExistingIstanbulNetwork.js')
+let newRaftNetwork = require('./raft/newNetwork')
+let joinExistingRaft = require('./raft/joinExistingNetwork')
+let newIstanbulNetwork = require('./istanbul/newNetwork')
+let joinExistingIstanbul = require('./istanbul/joinExistingNetwork')
+const { CONSENSUS, NODE_ROLE } = require('./constants');
 
-function run(){
+run = () => {
   console.log('[SetupFromConfig] Starting setup from config')
   console.log('==== Setup config ====')
   console.log('[IP]', setup.localIpAddress)
@@ -17,42 +18,62 @@ function run(){
   console.log('[KEEP_FILES]', setup.keepExistingFiles)
   console.log('[DELETE_KEYS]', setup.deleteKeys)
   console.log('==== Setup config ====')
-  if(config.setup.consensus === 'raft'){
-    if(config.setup.role === 'coordinator'){
+
+  switch (config.setup.consensus) {
+    case CONSENSUS.RAFT:
+      setupRaft();
+      break;
+
+    case CONSENSUS.ISTANBUL:
+      setupIstanbul();
+      break;
+    default:
+      console.log('Only raft and istanbul are supported')
+  }
+}
+
+let setupRaft = () => {
+  switch (config.setup.role) {
+    case NODE_ROLE.COORDINATOR:
       config.setup.automatedSetup = true
-      newRaftNetwork.HandleStartingNewRaftNetwork(config.setup, function(err, result){
-        if(err){console.log('ERROR:', err)} 
+      newRaftNetwork.startNewNetwork(config.setup, function (err, result) {
+        if (err) { console.log('ERROR:', err) }
         console.log('[SetupFromConfig] All done. Leave this running, ideally inside screen')
       })
-    } else if (config.setup.role === 'non-coordinator'){
+      break;
+    case NODE_ROLE.NONCOORDINATOR:
       console.log('TODO: non-coordinator')
-    } else if (config.setup.role === 'dynamicPeer'){
+      break;
+    case NODE_ROLE.DYNAMIC_PEER:
       config.setup.automatedSetup = true
-      joinExistingRaft.HandleJoiningRaftNetwork(config.setup, function(err, result){
-        if(err){console.log('ERROR:', err)} 
+      joinExistingRaft.handleJoiningRaftNetwork(config.setup, function (err, result) {
+        if (err) { console.log('ERROR:', err) }
         console.log('[SetupFromConfig] All done. Leave this running, ideally inside screen')
       })
-    } else {
+      break;
+    default:
       console.log('Unsupported option:', config.setup.role)
-    }    
-  } else if(config.setup.consensus === 'istanbul'){
-    if(config.setup.role === 'coordinator'){
+  }
+}
+
+let setupIstanbul = () => {
+  switch (config.setup.role) {
+    case NODE_ROLE.COORDINATOR:
       config.setup.automatedSetup = true
-      newIstanbulNetwork.handleStartingNewIstanbulNetwork(config.setup, function(err, result){
-        if(err){console.log('ERROR:', err)} 
+      newIstanbulNetwork.startNewNetwork(config.setup, function (err, result) {
+        if (err) { console.log('ERROR:', err) }
         console.log('[SetupFromConfig] All done. Leave this running, ideally inside screen')
       })
-    } else if (config.setup.role === 'dynamicPeer'){
+      break;
+    case NODE_ROLE.DYNAMIC_PEER:
       config.setup.automatedSetup = true
-      joinExistingIstanbul.handleJoiningExistingIstanbulNetwork(config.setup, function(err, result){
-        if(err){console.log('ERROR:', err)} 
+      joinExistingIstanbul.handleJoiningExistingIstanbulNetwork(config.setup, function (err, result) {
+        if (err) { console.log('ERROR:', err) }
         console.log('[SetupFromConfig] All done. Leave this running, ideally inside screen')
       })
-    } else {
+      break;
+    default:
       console.log('Unsupported option:', config.setup.role)
-    }    
-  } else {
-    console.log('Only raft and istanbul are supported')
   }
 }
 
