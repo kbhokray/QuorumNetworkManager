@@ -1,7 +1,7 @@
 const util = require('util');
 const Events = require('events');
 
-function EventEmitter(){
+function EventEmitter() {
   Events.call(this);
 }
 util.inherits(EventEmitter, Events);

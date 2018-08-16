@@ -8,11 +8,11 @@ config.chainId = 4058
 config.ports = {}
 config.ports.communicationNode = 50000
 config.ports.remoteCommunicationNode = 50000
-config.ports.communicationNodeRPC = 50010
-config.ports.communicationNodeWS_RPC = 50020
+config.ports.communicationNodeRpc = 50010
+config.ports.communicationNodeWsRpc = 50020
 config.ports.gethNode = 20000 // Changing this will change the raftHttp port!
-config.ports.gethNodeRPC = 20010
-config.ports.gethNodeWS_RPC = 20020
+config.ports.gethNodeRpc = 20010
+config.ports.gethNodeWsRpc = 20020
 config.ports.raftHttp = config.ports.gethNode + 20000  // This is a requirement from raftHttp!
 config.ports.devp2p = 30303
 config.ports.constellation = 9000
@@ -28,8 +28,8 @@ config.whisper.id = null
 config.whisper.powTime = 3
 config.whisper.powTarget = 0.5
 config.whisper.diskEncryptionPassword = 'insertSecurePassword' || process.env.WHISPER_DISK_ENCRYPTION_PASSWORD
-config.whisper.diskEncryptionDirectory = 'WhisperKeys' || process.env.WHISPER_DISK_ENCRYPTION_DIRECTORY
-config.whisper.diskEncryptionFileName = 'whisperKeys.txt'
+config.whisper.diskEncryptionDirectory = 'whisper_keys' || process.env.WHISPER_DISK_ENCRYPTION_DIRECTORY
+config.whisper.diskEncryptionFileName = 'whisper_keys.txt'
 
 // Change these for different setups. 
 config.setup = {}
@@ -42,7 +42,7 @@ config.setup.keepExistingFiles = (env.KEEP_FILES == 'true')
 // Options are true or false. This refers to the nodekey and keystore
 config.setup.deleteKeys = (env.DELETE_KEYS == 'true')
 // Only raft supported for now
-config.setup.consensus = env.CONSENSUS ? env.CONSENSUS : 'raft'
+config.setup.consensus = env.CONSENSUS ? env.CONSENSUS : 'istanbul'
 // Options are coordinator, non-coordinator, dynamicPeer
 config.setup.role = env.ROLE ? env.ROLE : 'coordinator'
 // Enodes that will be written to static-nodes.json if coordinator, comma separated strings
@@ -54,8 +54,8 @@ config.setup.remoteIpAddress = env.COORDINATING_IP ? env.COORDINATING_IP : '127.
 // This is changed to true if setupFromConfig.js is used
 config.setup.automatedSetup = false
 // The target gas limit that this node will be voting for
-config.setup.targetGasLimit = env.TARGET_GAS_LIMIT ? env.TARGET_GAS_LIMIT : '10000000'
+config.setup.targetGasLimit = env.TARGET_GAS_LIMIT ? env.TARGET_GAS_LIMIT : '1000000000'
 // The block gas limit specified in the genesis config (only used if this node is the coordinator)
-config.setup.genesisGasLimit = env.GENESIS_GAS_LIMIT ? env.GENESIS_GAS_LIMIT : '10000000'
+config.setup.genesisGasLimit = env.GENESIS_GAS_LIMIT ? env.GENESIS_GAS_LIMIT : '1000000000'
 
 module.exports = config

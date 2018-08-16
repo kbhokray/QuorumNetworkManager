@@ -4,7 +4,9 @@
   "description": "Create and manage Quorum networks",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha --reporter spec"
+    "test": "./node_modules/.bin/mocha --reporter spec",
+    "debug": "nodemon --inspect-brk ./setupFromConfig.js",
+    "debug-static": "node --inspect-brk ./setupFromConfig.js"
   },
   "repository": {
     "type": "git",

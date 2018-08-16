@@ -17,9 +17,9 @@ else
     mkdir -p ../backup_QNM
     cp -r Blockchain/keystore ../backup_QNM/.
     cp Blockchain/geth/nodekey ../backup_QNM/.
-    if [ -d "WhisperKeys" ]
+    if [ -d "whisper_keys" ]
     then
-      cp -r WhisperKeys ../backup_QNM/.
+      cp -r whisper_keys ../backup_QNM/.
     fi
 
     # delete pending transactions
