@@ -114,7 +114,7 @@ let addEnodeRequestHandler = (result, cb) => {
   let comm = result.communicationNetwork;
   let shh = comm.web3WsRpc.shh;
 
-  let message = REQUEST.enode;
+  let message = REQUEST.ENODE;
 
   whisperUtils.postAtInterval(message, shh, WHISPER_TOPIC_ENODE, 10 * 1000, (err, intervalId) => {
     if (err) { console.log('addEnodeRequestHandler post ERROR:', err) }
