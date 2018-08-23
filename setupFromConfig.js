@@ -1,10 +1,9 @@
-var fs = require('fs');
 let config = require('./config')
 let setup = config.setup
-let newRaftNetwork = require('./raft/newNetwork')
-let joinExistingRaft = require('./raft/joinExistingNetwork')
-let newIstanbulNetwork = require('./istanbul/newNetwork')
-let joinExistingIstanbul = require('./istanbul/joinExistingNetwork')
+let newRaftNetwork = require('./setup/raft/newNetwork')
+let joinExistingRaft = require('./setup/raft/joinExistingNetwork')
+let newIstanbulNetwork = require('./setup/istanbul/newNetwork')
+let joinExistingIstanbul = require('./setup/istanbul/joinExistingNetwork')
 const { CONSENSUS, NODE_ROLE } = require('./constants');
 
 run = () => {
@@ -23,7 +22,6 @@ run = () => {
     case CONSENSUS.RAFT:
       setupRaft();
       break;
-
     case CONSENSUS.ISTANBUL:
       setupIstanbul();
       break;
@@ -36,7 +34,7 @@ let setupRaft = () => {
   switch (config.setup.role) {
     case NODE_ROLE.COORDINATOR:
       config.setup.automatedSetup = true
-      newRaftNetwork.startNewNetwork(config.setup, function (err, result) {
+      newRaftNetwork.startNewNetwork(config.setup, (err, result) => {
         if (err) { console.log('ERROR:', err) }
         console.log('[SetupFromConfig] All done. Leave this running, ideally inside screen')
       })
@@ -60,14 +58,14 @@ let setupIstanbul = () => {
   switch (config.setup.role) {
     case NODE_ROLE.COORDINATOR:
       config.setup.automatedSetup = true
-      newIstanbulNetwork.startNewNetwork(config.setup, function (err, result) {
+      newIstanbulNetwork.startNewNetwork(config.setup, (err, result) => {
         if (err) { console.log('ERROR:', err) }
         console.log('[SetupFromConfig] All done. Leave this running, ideally inside screen')
       })
       break;
     case NODE_ROLE.DYNAMIC_PEER:
       config.setup.automatedSetup = true
-      joinExistingIstanbul.handleJoiningExistingIstanbulNetwork(config.setup, function (err, result) {
+      joinExistingIstanbul.handleJoiningExistingIstanbulNetwork(config.setup, (err, result) => {
         if (err) { console.log('ERROR:', err) }
         console.log('[SetupFromConfig] All done. Leave this running, ideally inside screen')
       })

@@ -9,102 +9,104 @@ let config = require('./config')
 let ports = config.ports
 let setup = config.setup
 
-let constellation = require('./constellation')
+let constellation = require('./constellation/constellation')
+
+let ip = require('whatismyip')
 
 const {
   FOLDER_BLOCKCHAIN, FOLDER_BLOCKCHAIN_KEYSTORE, FILE_BLOCKCHAIN_NODEKEY,
-  FOLDER_NODEKEY, FOLDER_BLOCKCHAIN_GETH, FOLDER_KEYSTORE,
+  FILE_QUORUM_NODEKEY, FOLDER_BLOCKCHAIN_GETH, FOLDER_QUORUM_KEYSTORE,
   CONSENSUS,
   ISTANBUL_SETUP_OUTPUT, ISTANBUL_SETUP_OUTPUT_VALIDATORS,
   FILE_BLOCKCHAIN_IBFTVALIDATORADDRESS,
   FILE_BLOCKCHAIN_STATICNODES,
   STDOUT_NEWGETHACCOUNT_YOURNEWACCOUNT, STDOUT_NEWGETHACCOUNT_REPEAT,
   STDOUT_NEWGETHACCOUNT_ADDRESS, STDERR_NEWGETHACCOUNT_NODEFAULTACC,
-  ISTANBUL_SETUP_OUTPUT_GENESIS, FILE_GENESIS_QUORUM
+  STDOUT_LISTGETHACCOUNT_ACCOUNT0, STDERR_LISTGETHACCOUNT_NODEFAULTACC,
+  ISTANBUL_SETUP_OUTPUT_GENESIS, FILE_BLOCKCHAIN_GENESIS, 
+  RAFT_DEFAULTBALANCE, ISTANBUL_DEFAULTBALANCE
 } = require('./constants');
 
-function killallGethConstellationNode(cb) {
+let killallGethConstellationNode = (cb) => {
   var cmd = 'killall -9';
   cmd += ' geth';
   cmd += ' constellation-node';
-  var child = exec(cmd, function () {
+  var child = exec(cmd, () => {
     cb(null, null);
   });
-  child.stderr.on('data', function (error) {
+  child.stderr.on('data', (error) => {
     console.log('ERROR:', error);
     cb(error, null);
   });
 }
 
 let clearDirectories = (result, cb) => {
-  var cmd = 'rm -rf';
-  for (var i in result.folders) {
-    var folder = result.folders[i];
+  let cmd = 'rm -rf';
+  for (let folder of result.folders) {
     cmd += ' ' + folder;
   }
   if (result.folders.includes(FOLDER_BLOCKCHAIN) && config.setup.deleteKeys === false
     && fs.existsSync(FOLDER_BLOCKCHAIN_KEYSTORE) && fs.existsSync(FILE_BLOCKCHAIN_NODEKEY)) {
     console.log('[*] Backing up previous keys')
-    let backupKeys = `cp -r ${FOLDER_BLOCKCHAIN_KEYSTORE} . && cp ${FILE_BLOCKCHAIN_NODEKEY} . && `
+    let backupKeys = `cp -r ${FOLDER_BLOCKCHAIN_KEYSTORE} ${FOLDER_QUORUM_KEYSTORE} && cp ${FILE_BLOCKCHAIN_NODEKEY} ${FOLDER_QUORUM_KEYSTORE} && `
     cmd = backupKeys + cmd
   } else if (result.folders.includes(FOLDER_BLOCKCHAIN)) {
     console.log('[*] Not backing up previous keys')
   }
-  var child = exec(cmd, function () {
+  let child = exec(cmd, () => {
     cb(null, result);
   });
-  child.stderr.on('data', function (error) {
+  child.stderr.on('data', (error) => {
     console.log('ERROR:', error);
     cb(error, null);
   });
 }
 
 let createDirectories = (result, cb) => {
-  var cmd = 'mkdir -p';
-  for (var i in result.folders) {
-    var folder = result.folders[i];
+  let cmd = 'mkdir -p';
+  for (let folder of result.folders) {
     cmd += ' ' + folder;
   }
   if (result.folders.includes(FOLDER_BLOCKCHAIN) && config.setup.deleteKeys === false
     && fs.existsSync(FOLDER_BLOCKCHAIN_KEYSTORE) && fs.readdirSync(FOLDER_BLOCKCHAIN_KEYSTORE).length > 0) {
     console.log('[*] Restoring previous keys')
-    let backupKeys = ` && mkdir -p ${FOLDER_BLOCKCHAIN_KEYSTORE} && mv ${FOLDER_KEYSTORE}/* ${FOLDER_BLOCKCHAIN_KEYSTORE}/`
-    backupKeys += ` && mv ${FOLDER_NODEKEY} ${FOLDER_BLOCKCHAIN_GETH}/ && rm -rf ${FOLDER_KEYSTORE}`
+    let backupKeys = ` && mkdir -p ${FOLDER_BLOCKCHAIN_KEYSTORE} && mv ${FOLDER_QUORUM_KEYSTORE}/* ${FOLDER_BLOCKCHAIN_KEYSTORE}/`
+    backupKeys += ` && mv ${FILE_QUORUM_NODEKEY} ${FOLDER_BLOCKCHAIN_GETH}/ && rm -rf ${FOLDER_QUORUM_KEYSTORE}`
     cmd = cmd + backupKeys
   } else if (result.folders.includes(FOLDER_BLOCKCHAIN)) {
     console.log('[*] Not reusing old keys')
   }
-  var child = exec(cmd, function () {
+  let child = exec(cmd, () => {
     cb(null, result);
   });
-  child.stderr.on('data', function (error) {
+  child.stderr.on('data', (error) => {
     console.log('ERROR:', error);
     cb(error, null);
   });
 }
 
-function hex2a(hexx) {
-  var hex = hexx.toString();//force conversion
-  var str = '';
-  for (var i = 0; i < hex.length; i += 2) {
+let hex2a = (hexx) => {
+  let hex = hexx.toString();//force conversion
+  let str = '';
+  for (let i = 0; i < hex.length; i += 2) {
     str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
   }
   return str;
 }
 
 // TODO: Add failure after a number of retries
-function waitForIpcPath(path, cb) {
+let waitForIpcPath = (path, cb) => {
   if (fs.existsSync(path)) {
     cb()
   } else {
-    setTimeout(function () {
+    setTimeout(() => {
       waitForIpcPath(path, cb)
     }, 1000)
   }
 }
 
-function createWeb3Ipc(ipcProvider) {
-  let Web3IPC = require('web3_ipc');
+let createWeb3Ipc = (ipcProvider) => {
+  let Web3Ipc = require('web3_ipc');
   let options = {
     host: ipcProvider,
     ipc: true,
@@ -112,13 +114,13 @@ function createWeb3Ipc(ipcProvider) {
     admin: true,
     debug: false
   };
-  let web3Ipc = Web3IPC.create(options);
+  let web3Ipc = Web3Ipc.create(options);
   let web3IpcConnection = web3Ipc.currentProvider.connection
   return web3Ipc
 }
 
-function waitForRpcConnection(web3Rpc, cb) {
-  web3Rpc.eth.net.isListening(function (err, isListening) {
+let waitForRpcConnection = (web3Rpc, cb) => {
+  web3Rpc.eth.net.isListening((err, isListening) => {
     if (isListening === true) {
       console.log('[*] RPC connection established')
       cb()
@@ -132,9 +134,9 @@ function waitForRpcConnection(web3Rpc, cb) {
 }
 
 // TODO: add error handler here for web3 connections so that program doesn't exit on error
-function createWeb3Connection(result, cb) {
+let createWeb3Connection = (result, cb) => {
   let ipcProvider = result.web3IpcHost;
-  waitForIpcPath(ipcProvider, function () {
+  waitForIpcPath(ipcProvider, () => {
     // Web3 WS RPC
     let web3WsRpc
     if (result.web3WsRpcProvider) {
@@ -148,7 +150,7 @@ function createWeb3Connection(result, cb) {
     let Web3HttpRpc = require('web3');
     let web3HttpRpc = new Web3HttpRpc(httpProvider);
     result.web3HttpRpc = web3HttpRpc
-    waitForRpcConnection(result.web3HttpRpc, function () {
+    waitForRpcConnection(result.web3HttpRpc, () => {
       result.web3Ipc = createWeb3Ipc(ipcProvider)
       if (result.consensus === CONSENSUS.RAFT) {
         let Web3Raft = require('web3-raft');
@@ -161,49 +163,49 @@ function createWeb3Connection(result, cb) {
   })
 }
 
-function connectToPeer(result, cb) {
-  var enode = result.enode;
-  result.web3Ipc.admin.addPeer(enode, function (err, res) {
+let connectToPeer = (result, cb) => {
+  let enode = result.enode;
+  result.web3Ipc.admin.addPeer(enode, (err, res) => {
     if (err) { console.log('ERROR:', err); }
     cb(null, result);
   });
 }
 
-function getExistingDefaultAccount(result, cb) {
-  var options = { encoding: 'utf8', timeout: 10 * 1000 }
-  var child = exec('geth --datadir blockchain account list', options)
-  child.stdout.on('data', function (data) {
-    if (data.indexOf('Account #0') >= 0) {
-      var index1 = data.indexOf('{')
-      var index2 = data.indexOf('}')
-      var address = '0x' + data.substring(index1 + 1, index2)
-      if (result.addressList == undefined) {
+let getExistingDefaultAccount = (result, cb) => {
+  let options = { encoding: 'utf8', timeout: 10 * 1000 }
+  let child = exec(`geth --datadir ${FOLDER_BLOCKCHAIN} account list`, options)
+  child.stdout.on('data', (data) => {
+    if (data.indexOf(STDOUT_LISTGETHACCOUNT_ACCOUNT0) >= 0) {
+      let index1 = data.indexOf('{')
+      let index2 = data.indexOf('}')
+      let address = '0x' + data.substring(index1 + 1, index2)
+      if (result.addressList === undefined) {
         result.addressList = []
       }
       result.addressList.push(address);
       cb(null, result)
     }
   })
-  child.stderr.on('data', function (error) {
-    if (error.indexOf('No etherbase set and no accounts found as default') < 0) {
+  child.stderr.on('data', (error) => {
+    if (error.indexOf(STDERR_LISTGETHACCOUNT_NODEFAULTACC) < 0) {
       console.log('ERROR:', error)
       cb(error, null)
     }
   })
 }
 
-function getNewGethAccount(result, cb) {
-  if (config.setup.deleteKeys === true || fs.existsSync(`${FOLDER_BLOCKCHAIN_KEYSTORE}/*`) == false) {
-    var options = { encoding: 'utf8', timeout: 10 * 1000 }
-    var child = exec(`geth --datadir ${FOLDER_BLOCKCHAIN} account new`, options)
-    child.stdout.on('data', function (data) {
+let getNewGethAccount = (result, cb) => {
+  if (config.setup.deleteKeys === true || fs.existsSync(`${FOLDER_BLOCKCHAIN_KEYSTORE}/*`) === false) {
+    let options = { encoding: 'utf8', timeout: 10 * 1000 }
+    let child = exec(`geth --datadir ${FOLDER_BLOCKCHAIN} account new`, options)
+    child.stdout.on('data', (data) => {
       if (data.indexOf(STDOUT_NEWGETHACCOUNT_YOURNEWACCOUNT) >= 0) {
         child.stdin.write('\n')
       } else if (data.indexOf(STDOUT_NEWGETHACCOUNT_REPEAT) >= 0) {
         child.stdin.write('\n')
       } else if (data.indexOf(STDOUT_NEWGETHACCOUNT_ADDRESS) == 0) {
-        var index = data.indexOf('{')
-        var address = '0x' + data.substring(index + 1, data.length - 2)
+        let index = data.indexOf('{')
+        let address = '0x' + data.substring(index + 1, data.length - 2)
         if (result.addressList == undefined) {
           result.addressList = []
         }
@@ -211,45 +213,45 @@ function getNewGethAccount(result, cb) {
         cb(null, result)
       }
     })
-    child.stderr.on('data', function (error) {
+    child.stderr.on('data', (error) => {
       if (error.indexOf(STDERR_NEWGETHACCOUNT_NODEFAULTACC) < 0) {
         console.log('ERROR:', error)
         cb(error, null)
       }
     })
   } else {
-    getExistingDefaultAccount(result, function (accountAddress) {
+    getExistingDefaultAccount(result, () => {
       cb(null, result)
     })
   }
 }
 
-function instanceAlreadyRunningMessage(processName) {
+let instanceAlreadyRunningMessage = (processName) => {
   console.log('\n--- NOTE: There is an instance of ' + processName + ' already running.' +
     ' Please kill this instance by selecting option 5 before continuing\n')
 }
 
-function checkPreviousCleanExit(cb) {
+checkPreviousCleanExit = (cb) => {
   async.parallel({
-    geth: function (callback) {
+    geth: (callback) => {
       ps.lookup({
         command: 'geth',
         psargs: 'ef'
       },
-        function (err, resultList) {
+        (err, resultList) => {
           callback(err, resultList)
         })
     },
-    constellation: function (callback) {
+    constellation: (callback) => {
       ps.lookup({
         command: 'constellation-node',
         psargs: 'ef'
       },
-        function (err, resultList) {
+        (err, resultList) => {
           callback(err, resultList)
         })
     }
-  }, function (err, result) {
+  }, (err, result) => {
     if (result && result.geth && result.geth.length > 0) {
       instanceAlreadyRunningMessage('geth')
     }
@@ -260,7 +262,7 @@ function checkPreviousCleanExit(cb) {
   })
 }
 
-function createRaftGenesisBlockConfig(result, cb) {
+let createRaftGenesisBlockConfig = (result, cb) => {
   let genesisTemplate = {
     "alloc": {},
     "coinbase": result.addressList[0],
@@ -281,21 +283,21 @@ function createRaftGenesisBlockConfig(result, cb) {
     "timestamp": "0x00"
   }
 
-  for (let key in result.addressList) {
-    genesisTemplate.alloc[result.addressList[key]] = {
-      "balance": "1000000000000000000000000000"
+  for (let address of result.addressList) {
+    genesisTemplate.alloc[address] = {
+      "balance": RAFT_DEFAULTBALANCE
     }
   }
 
   let genesisConfig = JSON.stringify(genesisTemplate)
 
-  fs.writeFile(FILE_GENESIS_QUORUM, genesisConfig, 'utf8', function (err, res) {
+  fs.writeFile(FILE_BLOCKCHAIN_GENESIS, genesisConfig, 'utf8', (err, res) => {
     result.communicationNetwork.genesisBlockConfigReady = true;
     cb(err, result);
   })
 }
 
-function isWeb3RpcConnectionAlive(web3Rpc) {
+let isWeb3RpcConnectionAlive = (web3Rpc) => {
   let isAlive = false
   try {
     let accounts = web3Rpc.eth.accounts
@@ -306,30 +308,30 @@ function isWeb3RpcConnectionAlive(web3Rpc) {
   return isAlive
 }
 
-function getEnodePubKey(cb) {
+let getEnodePubKey = (cb) => {
   let options = { encoding: 'utf8', timeout: 10 * 1000 };
   let child = exec(`bootnode -nodekey ${FILE_BLOCKCHAIN_NODEKEY} -writeaddress`, options)
-  child.stdout.on('data', function (data) {
+  child.stdout.on('data', (data) => {
     data = data.slice(0, -1)
     cb(null, data)
   })
-  child.stderr.on('data', function (error) {
+  child.stderr.on('data', (error) => {
     console.log('ERROR:', error)
     cb(error, null)
   })
 }
 
-function generateEnode(result, cb) {
+let generateEnode = (result, cb) => {
   console.log('Generating node key');
   switch (result.consensus) {
     case CONSENSUS.RAFT:
       let options = { encoding: 'utf8', timeout: 10 * 1000 };
       let child = exec(`bootnode -genkey ${FILE_BLOCKCHAIN_NODEKEY}`, options)
-      child.stderr.on('data', function (error) {
+      child.stderr.on('data', (error) => {
         console.log('ERROR:', error)
       })
-      child.stdout.on('close', function (error) {
-        getEnodePubKey(function (err, pubKey) {
+      child.stdout.on('close', (error) => {
+        getEnodePubKey((err, pubKey) => {
           let enode = 'enode://' + pubKey + '@' + result.localIpAddress + ':' + ports.gethNode +
             '?raftport=' + ports.raftHttp
           result.nodePubKey = pubKey
@@ -339,7 +341,7 @@ function generateEnode(result, cb) {
       })
       break;
     case CONSENSUS.ISTANBUL:
-      runIstanbulTools(function (err, dataString) {
+      runIstanbulTools((err, dataString) => {
         getIstanbulSetupFromIstanbulTools(dataString,
           (err, validatorsJson, staticNodesJson, genesisJson) => {
             let validatorAddress = validatorsJson[ISTANBUL_SETUP_OUTPUT_VALIDATORS.ADDRESS]
@@ -362,16 +364,16 @@ function generateEnode(result, cb) {
   }
 }
 
-function displayEnode(result, cb) {
+let displayEnode = (result, cb) => {
   let options = { encoding: 'utf8', timeout: 10 * 1000 };
   let child = exec(`bootnode -nodekey ${FILE_BLOCKCHAIN_NODEKEY} -writeaddress`, options)
-  child.stdout.on('data', function (data) {
+  child.stdout.on('data', (data) => {
     data = data.slice(0, -1)
     let enode = 'enode://' + data + '@' + result.localIpAddress + ':' + ports.gethNode + '?raftport=' + ports.raftHttp
     console.log('\nenode:', enode + '\n')
     cb(null, result)
   })
-  child.stderr.on('data', function (error) {
+  child.stderr.on('data', (error) => {
     console.log('ERROR:', error)
     cb(error, null)
   })
@@ -398,14 +400,14 @@ function displayCommunicationEnode(result, cb) {
   })
 }
 
-function handleExistingFiles(result, cb) {
-  if (result.keepExistingFiles == false) {
+let handleExistingFiles = (result, cb) => {
+  if (result.keepExistingFiles === false) {
     let seqFunction = async.seq(
       clearDirectories,
       createDirectories
     )
-    seqFunction(result, function (err, res) {
-      if (err) { return console.log('ERROR', err) }
+    seqFunction(result, (err, res) => {
+      if (err) { return console.log('ERROR:', err) }
       cb(null, res)
     })
   } else {
@@ -413,8 +415,7 @@ function handleExistingFiles(result, cb) {
   }
 }
 
-function createStaticNodeFile(enodeList, cb) {
-  let options = { encoding: 'utf8', timeout: 100 * 1000 };
+let createStaticNodeFile = (enodeList, cb) => {
   let list = ''
   for (let enode of enodeList) {
     list += '"' + enode + '",'
@@ -424,27 +425,27 @@ function createStaticNodeFile(enodeList, cb) {
     + list
     + ']'
 
-  fs.writeFile(FILE_BLOCKCHAIN_STATICNODES, staticNodes, function (err, res) {
+  fs.writeFile(FILE_BLOCKCHAIN_STATICNODES, staticNodes, (err, res) => {
     cb(err, res);
   });
 }
 
-function getRaftConfiguration(result, cb) {
+let getRaftConfiguration = (result, cb) => {
   if (setup.automatedSetup) {
     if (setup.enodeList) {
       result.enodeList = result.enodeList.concat(setup.enodeList)
     }
-    createStaticNodeFile(result.enodeList, function (err, res) {
+    createStaticNodeFile(result.enodeList, (err, res) => {
       result.communicationNetwork.staticNodesFileReady = true
       cb(err, result)
     })
   } else {
     console.log('Please wait for others to join. Hit any key + enter once done.')
-    prompt.get(['done'], function (err, answer) {
+    prompt.get(['done'], (err, answer) => {
       if (result.communicationNetwork && result.communicationNetwork.enodeList) {
         result.enodeList = result.enodeList.concat(result.communicationNetwork.enodeList)
       }
-      createStaticNodeFile(result.enodeList, function (err, res) {
+      createStaticNodeFile(result.enodeList, (err, res) => {
         result.communicationNetwork.staticNodesFileReady = true
         cb(err, result)
       })
@@ -452,26 +453,26 @@ function getRaftConfiguration(result, cb) {
   }
 }
 
-function runIstanbulTools(cb) {
+let runIstanbulTools = (cb) => {
   let cmd = 'istanbul setup --nodes --verbose --num 1 --quorum';
-  let child = exec(cmd, function () { })
+  let child = exec(cmd, () => { })
 
   let dataString = ''
-  child.stdout.on('data', function (chunk) {
+  child.stdout.on('data', (chunk) => {
     dataString += chunk
   })
 
-  child.stdout.on('end', function () {
+  child.stdout.on('end', () => {
     cb(null, dataString)
   })
 
-  child.stderr.on('data', function (error) {
+  child.stderr.on('data', (error) => {
     console.log('ERROR:', error)
     cb(error, null)
   })
 }
 
-function getIstanbulSetupFromIstanbulTools(dataString, cb) {
+let getIstanbulSetupFromIstanbulTools = (dataString, cb) => {
 
   let validatorsName = ISTANBUL_SETUP_OUTPUT.VALIDATORS
   let staticNodesFileName = ISTANBUL_SETUP_OUTPUT.STATICNODES
@@ -491,23 +492,23 @@ function getIstanbulSetupFromIstanbulTools(dataString, cb) {
   cb(null, validatorsJson, staticNodesJson, genesisJson)
 }
 
-function getIstanbulConfiguration(result, cb) {
-  runIstanbulTools(function (err, dataString) {
-    getIstanbulSetupFromIstanbulTools(dataString, function (err, validatorsJSON, staticNodesJSON, genesisJSON) {
-      let nodekeyFile = validatorsJSON[ISTANBUL_SETUP_OUTPUT_VALIDATORS.NODEKEY]
+let getIstanbulConfiguration = (result, cb) => {
+  runIstanbulTools((err, dataString) => {
+    getIstanbulSetupFromIstanbulTools(dataString, (err, validatorsJson, staticNodesJson, genesisJson) => {
+      let nodekeyFile = validatorsJson[ISTANBUL_SETUP_OUTPUT_VALIDATORS.NODEKEY]
       fs.writeFileSync(FILE_BLOCKCHAIN_NODEKEY, nodekeyFile, 'utf8')
 
-      staticNodesJSON[0] = staticNodesJSON[0].replace('0.0.0.0:30303?discport=0', result.localIpAddress + ':' + ports.gethNode)
-      fs.writeFileSync(FILE_BLOCKCHAIN_STATICNODES, JSON.stringify(staticNodesJSON), 'utf8')
+      staticNodesJson[0] = staticNodesJson[0].replace('0.0.0.0:30303?discport=0', result.localIpAddress + ':' + ports.gethNode)
+      fs.writeFileSync(FILE_BLOCKCHAIN_STATICNODES, JSON.stringify(staticNodesJson), 'utf8')
 
-      genesisJSON[ISTANBUL_SETUP_OUTPUT_GENESIS.CONFIG].chainId = config.chainId
-      genesisJSON[ISTANBUL_SETUP_OUTPUT_GENESIS.CONFIG].byzantiumBlock = 1
-      for (let key in result.addressList) {
-        genesisJSON.alloc[result.addressList[key]] = {
-          "balance": "0x446c3b15f9926687d2c40534fdb564000000000000"
+      genesisJson[ISTANBUL_SETUP_OUTPUT_GENESIS.CONFIG].chainId = config.chainId
+      genesisJson[ISTANBUL_SETUP_OUTPUT_GENESIS.CONFIG].byzantiumBlock = 1
+      for (let address of result.addressList) {
+        genesisJson.alloc[address] = {
+          "balance": ISTANBUL_DEFAULTBALANCE
         }
       }
-      fs.writeFileSync(FILE_GENESIS_QUORUM, JSON.stringify(genesisJSON), 'utf8')
+      fs.writeFileSync(FILE_BLOCKCHAIN_GENESIS, JSON.stringify(genesisJson), 'utf8')
 
       result.communicationNetwork.genesisBlockConfigReady = true
       result.communicationNetwork.staticNodesFileReady = true
@@ -516,7 +517,7 @@ function getIstanbulConfiguration(result, cb) {
   })
 }
 
-function addAddressListToQuorumConfig(result, cb) {
+let addAddressListToQuorumConfig = (result, cb) => {
   if (setup.addressList && setup.addressList.length > 0) {
     result.addressList = result.addressList.concat(setup.addressList)
   }
@@ -526,8 +527,8 @@ function addAddressListToQuorumConfig(result, cb) {
   cb(null, result)
 }
 
-function handleNetworkConfiguration(result, cb) {
-  if (result.keepExistingFiles == false) {
+let setupNetworkConfiguration = (result, cb) => {
+  if (result.keepExistingFiles === false) {
     let createGenesisBlockConfig = null
     switch (result.consensus) {
       case CONSENSUS.RAFT: {
@@ -539,8 +540,8 @@ function handleNetworkConfiguration(result, cb) {
           constellation.createNewKeys,
           constellation.createConfig
         )
-        seqFunction(result, function (err, res) {
-          if (err) { return console.log('ERROR', err) }
+        seqFunction(result, (err, res) => {
+          if (err) { return console.log('ERROR:', err) }
           cb(null, res)
         })
       }
@@ -553,7 +554,7 @@ function handleNetworkConfiguration(result, cb) {
           constellation.createNewKeys,
           constellation.createConfig
         )
-        seqFunction(result, function (err, res) {
+        seqFunction(result, (err, res) => {
           if (err) { return console.log('ERROR', err) }
           cb(null, res)
         })
@@ -568,6 +569,23 @@ function handleNetworkConfiguration(result, cb) {
     result.communicationNetwork.staticNodesFileReady = true
     cb(null, result)
   }
+}
+
+let options = {
+  url: 'http://checkip.dyndns.org/',
+  truncate: '',
+  timeout: 10000,
+  matchIndex: 0
+}
+
+let whatIsMyIp = (cb) => {
+  ip.whatismyip(options, (err, data) => {
+    if (err) { console.log('ERROR:', err) }
+    let ipAddresses = {
+      publicIp: data.ip,
+    }
+    cb(ipAddresses)
+  })
 }
 
 exports.hex2a = hex2a
@@ -586,4 +604,5 @@ exports.DisplayCommunicationEnode = displayCommunicationEnode
 exports.handleExistingFiles = handleExistingFiles
 exports.generateEnode = generateEnode
 exports.displayEnode = displayEnode
-exports.handleNetworkConfiguration = handleNetworkConfiguration
+exports.setupNetworkConfiguration = setupNetworkConfiguration
+exports.whatIsMyIp = whatIsMyIp

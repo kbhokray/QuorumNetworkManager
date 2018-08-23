@@ -44,26 +44,8 @@ jspm_packages
 *.swo
 *.swn
 
-# Blockchain data files
-WhisperKeys/*
-blockchain/raft-snap*
-blockchain/static-nodes.json
-blockchain/quorum-raft-state*
-blockchain/raft-wal*
-blockchain/geth*
-blockchain/keystore*
-blockchain/raftID
-blockchain
-quorum-config.json
-quorum-genesis.json
-
-# Constellation files
-constellation.config
-Constellation/data
-Constellation/node*
-
-# CommunicationNode
-CommunicationNode/
+# Artifacts
+quorum/*
 
 # Tests
 test/node*
