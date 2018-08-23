@@ -36,7 +36,7 @@ let requestExistingIstanbulNetworkMembership = (result, cb) => {
     }
   }
 
-  whisperUtils.addBootstrapSubscription([NETWORKMEMBERSHIP], shh, onData,
+  whisperUtils.addBootstrapSubscription([WHISPER_TOPIC_NETWORKMEMBERSHIP], shh, onData,
     (err, _subscription) => {
       subscription = _subscription
     })
@@ -45,7 +45,7 @@ let requestExistingIstanbulNetworkMembership = (result, cb) => {
   request += '|' + result.enodeList[0]
   request += '|' + config.identity.nodeName
 
-  whisperUtils.postAtInterval(request, shh, NETWORKMEMBERSHIP, 5 * 1000, (err, intervalID) => {
+  whisperUtils.postAtInterval(request, shh, WHISPER_TOPIC_NETWORKMEMBERSHIP, 5 * 1000, (err, intervalID) => {
     let checkNetworkMembership = setInterval(() => {
       if (receivedNetworkMembership) {
         clearInterval(intervalID)
